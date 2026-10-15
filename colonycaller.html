@@ -4,6 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ColonyCaller</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ColonyCaller">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#10181C">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>try{var _t=JSON.parse(localStorage.getItem("colonycall:v3")||"{}");_t=(_t.opts&&_t.opts.theme)||"dark";document.documentElement.setAttribute("data-theme",_t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +29,7 @@
   padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
+  :root[data-theme="auto"]{
     --bg:#10181C; --surface:#18232A; --surface-2:#1D2A31; --ink:#E3ECE9; --muted:#9AABA8;
     --line:#2D3E45; --grid:rgba(227,236,233,.06); --accent:#E8695E; --accent-ink:#1A0F0E;
     --focus:#72B6F2; --warn:#E3B14F; color-scheme:dark;
@@ -35,6 +44,7 @@ html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
 button,input,select{font:inherit;color:inherit}
+button,.tile,.plate-tab{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .wrap{max-width:1180px;margin:0 auto;padding:20px clamp(14px,3vw,28px) 48px}
 
@@ -177,6 +187,10 @@ details.panel[open] summary{margin-bottom:12px}
 .engine .opt label{line-height:1.4}
 .engine-status{margin:10px 0 0;font-size:14px;color:var(--muted)}
 .engine-status.warn{color:var(--warn)}
+.theme-row{align-items:center;gap:14px;flex-wrap:wrap}
+.theme-row>span{color:var(--muted);font-size:14px}
+.theme-row label{display:flex;align-items:center;gap:6px}
+.theme-row input{width:16px;height:16px;margin:0}
 .mic-row-sel{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:14px}
 .mic-row-sel label{color:var(--muted);flex:0 0 auto}
 .mic-row-sel select{max-width:360px;padding:6px 8px}
@@ -194,6 +208,16 @@ details.panel[open] summary{margin-bottom:12px}
   .mic[aria-pressed="true"]::after{animation:none;opacity:.4}
   .tile.bump .tile-n{animation:none}
   .toast{transition:none}
+}
+@media (max-width:600px){
+  .mic{width:96px;height:96px}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .tile{min-height:92px;padding:9px 10px;column-gap:6px}.tile-word{font-size:16px;overflow-wrap:normal;hyphens:auto;padding-right:14px}.tile-n{font-size:34px}.tile-n{font-size:36px}.tile-alt{font-size:12px}
+  .actions .btn{padding:10px 14px}
+  .panel{padding:14px}
+  .brand p{font-size:14px}
+  .assay .reset-btn{padding:8px 11px}
+  .totals .t b{font-size:26px}
 }
 </style>
 </head>
@@ -281,6 +305,11 @@ details.panel[open] summary{margin-bottom:12px}
         <div class="opt"><input type="radio" name="engine" id="engCloud" value="cloud"><label for="engCloud"><b>Browser dictation</b> (Chrome or Edge, sends audio to Google or Microsoft). General-purpose dictation; it tends to drop a word repeated several times in a row.</label></div>
         <p class="engine-status" id="engStatus"></p>
         <div class="mic-row-sel" id="micRow" hidden><label for="micSel">Microphone</label><select id="micSel" aria-label="Microphone"></select></div>
+      </div>
+      <div class="opt theme-row"><span>Appearance</span>
+        <label><input type="radio" name="theme" value="light"> Light</label>
+        <label><input type="radio" name="theme" value="dark"> Dark</label>
+        <label><input type="radio" name="theme" value="auto"> Match device</label>
       </div>
       <div class="opt"><input type="checkbox" id="optSound"><label for="optSound">Beep when something is counted</label></div>
       <div class="opt"><input type="checkbox" id="optMiss"><label for="optMiss">Soft tone when a word isn’t recognized</label></div>
@@ -821,7 +850,12 @@ async function startLocal(){
         vlog({event:"silent", seconds:6, max:maxLvl});
       }
     }, 6000);
-    if(track) track.onmute = () => vlog({event:"track muted"});
+    if(track){
+      track.onmute = () => vlog({event:"track muted"});
+      /* a phone call or another app taking the microphone ends the track; come back when it is free */
+      track.onended = () => { vlog({event:"track ended"}); if(listening){ stopLocalAudio(); setTimeout(() => { if(listening) startLocal(); }, 1500); } };
+    }
+    keepAwake(true);
     vLoading = false; updateMicUI(); renderEngine(); setHeard("", "");
   }catch(e){
     vLoading = false; listening = false; stopLocalAudio(); updateMicUI(); renderEngine();
@@ -831,7 +865,24 @@ async function startLocal(){
     else showMicMsg("The on-device engine couldn’t start (" + (e && e.message || e) + "). You can switch to browser dictation below.");
   }
 }
+/* keep the phone's screen on while listening; a locked screen stops the microphone */
+let wakeLock = null;
+async function keepAwake(on){
+  try{
+    if(on && navigator.wakeLock && !wakeLock){ wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); }
+    else if(!on && wakeLock){ await wakeLock.release(); wakeLock = null; }
+  }catch(e){ wakeLock = null; }
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState !== "visible" || !listening || !engineLocal()) return;
+  keepAwake(true);
+  /* iOS suspends audio while the page is hidden; make sure it is running again */
+  if(vCtx && vCtx.state === "suspended") vCtx.resume().catch(() => {});
+  const t = vStream && vStream.getAudioTracks()[0];
+  if(!t || t.readyState === "ended"){ vlog({event:"mic ended while hidden, restarting"}); stopLocalAudio(); startLocal(); }
+});
 function stopLocalAudio(){
+  keepAwake(false);
   try{ vNode && vNode.disconnect(); }catch(e){}
   try{ vSrc && vSrc.disconnect(); }catch(e){}
   try{ vStream && vStream.getTracks().forEach(t => t.stop()); }catch(e){}
@@ -1082,6 +1133,13 @@ async function saveFile(name, text){
     }
   }
   try{
+    /* phones: hand the file to the share sheet (Files, AirDrop, Mail) instead of a download */
+    if(navigator.canShare && /iPhone|iPad|Android/i.test(navigator.userAgent)){
+      const f = new File([text], name, {type:"text/csv"});
+      if(navigator.canShare({files:[f]})){ try{ await navigator.share({files:[f], title:name}); return; }catch(e){ if(e && e.name === "AbortError") return; } }
+    }
+  }catch(e){}
+  try{
     const blob = new Blob([text], {type:"text/csv"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = name;
@@ -1112,6 +1170,14 @@ function armed(btn, label, fn){
   if(btn.dataset.armed === "1"){ fn(); return; }
   const orig = btn.textContent; btn.dataset.armed = "1"; btn.textContent = label;
   setTimeout(() => { if(btn.isConnected){ btn.dataset.armed = ""; btn.textContent = orig; } }, 3500);
+}
+function applyTheme(){
+  const t = state.opts.theme || "dark";
+  document.documentElement.setAttribute("data-theme", t);
+  document.querySelectorAll('input[name="theme"]').forEach(r => { r.checked = r.value === t; });
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const dark = t === "dark" || (t === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  if(meta) meta.content = dark ? "#10181C" : "#EAF0EE";
 }
 function catsChanged(){ WORDS = wordMap(); save(); renderCats(); render(); if(vRec) makeRecognizer(); renderEngine(); }
 
@@ -1192,6 +1258,8 @@ $("restoreBtn").addEventListener("click", e => armed(e.currentTarget, "Replace y
   catsChanged(); toast("Default colony types restored");
 }));
 $("optSound").addEventListener("change", e => { state.opts.sound = e.target.checked; save(); });
+document.querySelectorAll('input[name="theme"]').forEach(r => r.addEventListener("change", e => { if(e.target.checked){ state.opts.theme = e.target.value; save(); applyTheme(); } }));
+if(window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 $("micSel").addEventListener("change", e => {
   state.opts.micId = e.target.value; save();
   if(listening && engineLocal()){ stopListening(); startListening(); }
@@ -1237,7 +1305,7 @@ document.addEventListener("keydown", e => {
   else if(e.key === "Backspace"){ e.preventDefault(); undo("keyboard"); }
 });
 
-renderCats(); render(); renderEngine();
+applyTheme(); renderCats(); render(); renderEngine();
 if(engineLocal() && !LOCAL_FILE) loadVocab().then(renderEngine);
 })();
 </script>
