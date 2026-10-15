@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ColonyCaller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EAF0EE; --surface:#FFFFFF; --surface-2:#F4F8F6; --ink:#18262E; --muted:#56656C;
+  --line:#C7D3CF; --grid:rgba(24,38,46,.075); --accent:#B3261E; --accent-ink:#FFFFFF;
+  --focus:#1F6FB2; --warn:#8A5A00;
+  --font:"Barlow","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-c:"Barlow Semi Condensed","Arial Narrow","Barlow","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10181C; --surface:#18232A; --surface-2:#1D2A31; --ink:#E3ECE9; --muted:#9AABA8;
+    --line:#2D3E45; --grid:rgba(227,236,233,.06); --accent:#E8695E; --accent-ink:#1A0F0E;
+    --focus:#72B6F2; --warn:#E3B14F; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10181C; --surface:#18232A; --surface-2:#1D2A31; --ink:#E3ECE9; --muted:#9AABA8;
+  --line:#2D3E45; --grid:rgba(227,236,233,.06); --accent:#E8695E; --accent-ink:#1A0F0E;
+  --focus:#72B6F2; --warn:#E3B14F; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px clamp(14px,3vw,28px) 48px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+.brand h1{margin:0;font-family:var(--font-c);font-weight:700;font-size:clamp(30px,4.4vw,42px);line-height:1;letter-spacing:-.01em}
+.brand h1 .dot{display:inline-block;width:.42em;height:.42em;border-radius:50%;background:var(--accent);margin-left:.08em;vertical-align:.08em}
+.brand p{margin:4px 0 0;color:var(--muted)}
+.assay{display:flex;flex-direction:column;gap:4px;min-width:min(320px,100%)}
+.assay label,.field-label{font-size:14px;color:var(--muted)}
+.assay .reset-btn{width:100%;padding:9px 11px;margin-top:6px}
+.foot .reset-btn{padding:11px 22px;font-size:17px}
+input[type=text],select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 11px;width:100%}
+input[type=text]:focus,select:focus{border-color:var(--focus)}
+
+.plates{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.plate-tab{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;cursor:pointer;white-space:nowrap}
+.plate-tab .n{color:var(--muted);margin-left:6px;font-variant-numeric:tabular-nums}
+.plate-tab[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.plate-tab[aria-current="true"] .n{color:inherit;opacity:.75}
+.plate-tab.add{border-style:dashed;color:var(--muted)}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+@media (max-width:840px){.main{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+
+.listen{background-color:var(--surface);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;background-position:-1px -1px;display:flex;flex-direction:column;gap:16px;min-height:100%}
+.mic-row{display:flex;align-items:center;gap:16px}
+.mic{flex:0 0 auto;width:84px;height:84px;border-radius:50%;border:2px solid var(--accent);background:var(--surface);color:var(--accent);cursor:pointer;display:grid;place-items:center;position:relative}
+.mic svg{width:34px;height:34px}
+.mic[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.mic[aria-pressed="true"]::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--accent);opacity:.55;animation:ring 1.6s ease-out infinite}
+@keyframes ring{from{transform:scale(.92);opacity:.6}to{transform:scale(1.18);opacity:0}}
+.mic:disabled{opacity:.45;cursor:not-allowed}
+.mic-text strong{display:block;font-family:var(--font-c);font-size:22px;font-weight:600}
+.mic-text span{color:var(--muted);font-size:15px}
+.level{margin-top:8px;height:8px;width:min(220px,100%);background:var(--surface-2);border:1px solid var(--line);border-radius:4px;overflow:hidden;--lvl:0}
+.level span{display:block;height:100%;width:calc(var(--lvl) * 100%);background:var(--accent);transition:width .08s linear}
+.msg{background:var(--surface-2);border-left:4px solid var(--warn);padding:10px 12px;border-radius:4px;font-size:15px}
+.heard{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.heard .field-label{display:block;margin-bottom:2px}
+.heard{transition:border-color .3s,box-shadow .3s}
+.heard.miss{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.heard .heard-label{display:flex;justify-content:space-between;gap:8px}
+.miss-tag{color:var(--warn);opacity:0;transition:opacity .3s}
+.heard.miss .miss-tag{opacity:1}
+.heard-text{font-size:18px;min-height:1.45em;word-break:break-word}
+.heard-text .interim{color:var(--muted)}
+.teach{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:15px}
+.teach-item{display:flex;align-items:center;gap:6px;border:1px dashed var(--warn);border-radius:6px;padding:4px 6px 4px 10px;background:var(--surface)}
+.teach-item b{font-weight:600}
+.teach-item select{width:auto;padding:4px 6px;font-size:14px}
+.stream-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.stream-head h2{margin:0;font-size:17px;font-weight:600}
+.stream-head span{color:var(--muted);font-size:14px}
+.stream{display:flex;flex-wrap:wrap;gap:6px;min-height:40px;align-content:flex-start}
+.chip{font-family:var(--font-c);font-weight:600;font-size:15px;line-height:1;padding:7px 9px;border-radius:5px;background:var(--c,#666);color:#fff}
+.chip.gone{background:var(--surface);color:var(--warn);border:2px dashed var(--warn)}
+.chip.more{background:var(--surface);color:var(--muted);border:1px solid var(--line)}
+.chip.undone{opacity:.4;text-decoration:line-through;text-decoration-thickness:2px}
+.chip.latest{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--c,var(--warn))}
+.empty{color:var(--muted);font-size:15px;margin:0}
+
+.counts{display:flex;flex-direction:column;gap:14px}
+.plate-name{display:flex;flex-direction:column;gap:4px}
+.plate-name input{font-family:var(--font-c);font-size:22px;font-weight:600;padding:6px 10px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px}
+.tile{position:relative;text-align:left;border:1px solid var(--line);border-left:7px solid var(--c);background:var(--surface-2);border-radius:8px;padding:10px 12px;cursor:pointer;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto auto;column-gap:8px;min-height:108px}
+.tile:hover{border-color:var(--c);border-left-color:var(--c)}
+.tile-word{font-family:var(--font-c);font-weight:700;font-size:19px;grid-column:1;line-height:1.1;padding-right:18px;overflow-wrap:anywhere}
+.tile-label{grid-column:1;font-size:15px;font-weight:500}
+.tile-alt{grid-column:1;color:var(--muted);font-size:13px;align-self:end}
+.tile-n{grid-column:2;grid-row:1 / span 3;align-self:center;font-family:var(--font-c);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.tile kbd{position:absolute;top:8px;right:9px;font-family:var(--font);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px;background:var(--surface)}
+.tile.tally{border-left-style:dashed}
+.tile-word .star{font-size:.7em;color:var(--muted);margin-left:1px}
+.tile-notes{font-size:13px;color:var(--muted);line-height:1.4}
+.tile-notes p{margin:0}
+.tile.bump .tile-n{animation:bump .28s ease-out}
+@keyframes bump{40%{transform:scale(1.18)}}
+.totals{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:12px;flex-wrap:wrap}
+.totals .t{font-size:17px}
+.totals .t b{font-family:var(--font-c);font-size:30px;font-variant-numeric:tabular-nums;margin-left:6px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.danger{color:var(--accent);border-color:var(--accent)}
+.btn.small{padding:4px 10px;font-size:14px}
+.note{font-size:14px;color:var(--warn);margin:0}
+
+section.sum{margin-top:20px}
+.sum-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.sum-head h2{margin:0;font-family:var(--font-c);font-size:24px;font-weight:600}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.table-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;font-size:14px;color:var(--muted)}
+th .sw{display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c);margin-right:5px}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--surface-2)}
+tbody tr.cur td:first-child{font-weight:600}
+tbody tr.cur td:first-child::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:1px}
+tfoot td{font-weight:600;border-bottom:none}
+td.rm{width:1%}
+
+.lower{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;margin-top:20px;align-items:start}
+@media (max-width:840px){.lower{grid-template-columns:minmax(0,1fr)}}
+details.panel summary{cursor:pointer;font-family:var(--font-c);font-size:21px;font-weight:600;list-style-position:inside}
+details.panel[open] summary{margin-bottom:12px}
+.cat-head,.cat-row{display:grid;grid-template-columns:16px minmax(92px,.8fr) minmax(0,1.1fr) minmax(56px,.5fr) minmax(0,1fr) 84px;gap:8px;align-items:center}
+.cat-head span{padding-left:9px}
+.cat-row .btn{justify-self:start}
+.cat-head{font-size:13px;color:var(--muted);margin-bottom:4px}
+.cat-row{margin-bottom:8px}
+.cat-row .sw{width:16px;height:16px;border-radius:4px;background:var(--c)}
+.cat-row input,.cat-row select{padding:6px 8px}
+@media (max-width:520px){
+  .cat-head{display:none}
+  .cat-row{grid-template-columns:16px 1fr 1fr;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .cat-row .ab{grid-column:2}
+  .cat-row .also{grid-column:3}
+  .cat-row .btn{grid-column:2;justify-self:start}
+}
+.opt{display:flex;gap:10px;align-items:flex-start;margin:12px 0 0}
+.intro{margin:0 0 12px;color:var(--muted);font-size:15px}
+.nato{margin-top:16px;padding:12px 14px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line)}
+.nato h3{margin:0 0 4px;font-size:16px;font-weight:600}
+.nato p{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.nato-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:4px 10px;font-size:15px}
+.nato-list b{display:inline-block;width:1.2em;font-family:var(--font-c);font-weight:700}
+.nato-list li.used{color:var(--muted)}
+.nato-list li.used span::after{content:" \2713"}
+.opt input{margin-top:4px;width:18px;height:18px;flex:0 0 auto}
+.engine{margin-top:16px;padding:12px 14px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line)}
+.engine h3{margin:0;font-size:16px;font-weight:600}
+.engine .opt{margin-top:10px;font-size:15px}
+.engine .opt label{line-height:1.4}
+.engine-status{margin:10px 0 0;font-size:14px;color:var(--muted)}
+.engine-status.warn{color:var(--warn)}
+.mic-row-sel{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:14px}
+.mic-row-sel label{color:var(--muted);flex:0 0 auto}
+.mic-row-sel select{max-width:360px;padding:6px 8px}
+.help p{margin:0 0 10px}
+.help dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+.help dt{font-weight:600}
+.help dd{margin:0;color:var(--muted)}
+.diag{margin:14px 0 0;font-size:14px;color:var(--muted)}
+.diag .btn{margin-right:6px}
+.foot{margin-top:24px;color:var(--muted);font-size:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:15px;max-width:min(92vw,520px);opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){
+  .mic[aria-pressed="true"]::after{animation:none;opacity:.4}
+  .tile.bump .tile-n{animation:none}
+  .toast{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>ColonyCaller<span class="dot" aria-hidden="true"></span></h1>
+      <p>Colony assay dictation tool. Say the colony type, keep your eyes on the scope.</p>
+    </div>
+    <div class="assay">
+      <label for="assayName">Assay name</label>
+      <input type="text" id="assayName" placeholder="e.g. TET2 KO methylcellulose, day 12" autocomplete="off">
+      <button class="btn danger reset-btn" id="resetTopBtn">Start a new assay</button>
+    </div>
+  </header>
+
+  <nav class="plates" id="plates" aria-label="Plates"></nav>
+
+  <div class="main">
+    <section class="panel listen" aria-label="Voice input">
+      <div class="mic-row">
+        <button class="mic" id="micBtn" aria-pressed="false" aria-label="Start listening">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+        </button>
+        <div class="mic-text">
+          <strong id="micState">Not listening</strong>
+          <span id="micSub"></span>
+          <div class="level" id="micLevel" hidden title="Microphone level"><span></span></div>
+        </div>
+      </div>
+      <div class="msg" id="micMsg" hidden></div>
+      <div class="heard">
+        <span class="field-label heard-label">Heard<span class="miss-tag">Didn’t catch all of that</span></span>
+        <div class="heard-text" id="heard" aria-live="polite"><span class="interim">Nothing yet</span></div>
+      </div>
+      <div class="teach" id="teach" hidden></div>
+      <div>
+        <div class="stream-head"><h2>Calls on this plate, in order</h2><span id="streamCount"></span></div>
+        <div class="stream" id="stream"></div>
+      </div>
+    </section>
+
+    <section class="panel counts" aria-label="Counts for this plate">
+      <div class="plate-name">
+        <label class="field-label" for="plateName">Plate</label>
+        <input type="text" id="plateName" autocomplete="off">
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="tile-notes" id="tileNotes" hidden></div>
+      <p class="note" id="goneNote" hidden></p>
+      <div class="totals">
+        <span class="t">Total on this plate<b id="plateTotal">0</b></span>
+        <div class="actions">
+          <button class="btn" id="undoBtn">Undo last</button>
+          <button class="btn primary" id="nextPlateBtn">Next plate</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel sum" aria-label="All plates">
+    <div class="sum-head">
+      <h2>All plates</h2>
+      <div class="actions">
+        <button class="btn" id="copyBtn">Copy table</button>
+        <button class="btn" id="dlSumBtn">Download summary CSV</button>
+        <button class="btn" id="dlLogBtn">Download call log CSV</button>
+        <button class="btn" id="dlHeardBtn">Download transcript CSV</button>
+      </div>
+    </div>
+    <div class="table-scroll"><table id="sumTable"></table></div>
+  </section>
+
+  <div class="lower">
+    <details class="panel" id="catPanel" open>
+      <summary>Call words and what they count</summary>
+      <p class="intro">Type any word or phrase and what it should count. Put other words that should also count in “Also accepted”, separated by commas. Plurals work automatically. Changes save and apply right away.</p>
+      <div class="cat-head"><span></span><span>Call word or phrase</span><span>Name</span><span>Short</span><span>Also accepted</span><span></span></div>
+      <div id="catList"></div>
+      <div class="actions"><button class="btn" id="addCatBtn">Add a type</button><button class="btn" id="restoreBtn">Restore defaults</button></div>
+      <div class="engine">
+        <h3>Speech engine</h3>
+        <div class="opt"><input type="radio" name="engine" id="engLocal" value="local"><label for="engLocal"><b>On this computer</b> (recommended). Listens only for your call words, so fast repeats like “mike mike mike mike” count correctly. Nothing leaves the machine and it works offline. Needs the speech model file next to this page; “Open ColonyCaller.command” fetches it the first time.</label></div>
+        <div class="opt"><input type="radio" name="engine" id="engCloud" value="cloud"><label for="engCloud"><b>Browser dictation</b> (Chrome or Edge, sends audio to Google or Microsoft). General-purpose dictation; it tends to drop a word repeated several times in a row.</label></div>
+        <p class="engine-status" id="engStatus"></p>
+        <div class="mic-row-sel" id="micRow" hidden><label for="micSel">Microphone</label><select id="micSel" aria-label="Microphone"></select></div>
+      </div>
+      <div class="opt"><input type="checkbox" id="optSound"><label for="optSound">Beep when something is counted</label></div>
+      <div class="opt"><input type="checkbox" id="optMiss"><label for="optMiss">Soft tone when a word isn’t recognized</label></div>
+      <div class="nato">
+        <h3>Recommended: full words, ideally the NATO phonetic alphabet</h3>
+        <p>Speech recognition is most reliable with full, distinct words. Single letters like “G” are short and many of them rhyme (B, C, D, E, G, P, T, V), so they get misheard more often. If a letter keeps being missed, say a word instead. Colony names work well, and NATO words were designed to sound distinct over noisy radio. Words marked with a check are already in use.</p>
+        <ul class="nato-list" id="natoList"></ul>
+      </div>
+    </details>
+    <details class="panel help" open>
+      <summary>Voice commands</summary>
+      <p>Say a colony’s name or any of its other words. Plurals work too. The tiles show the words for each type.</p>
+      <dl>
+        <dt>granulocyte</dt><dd>Counts one CFU-G (so do “G” and “golf”). CFU-Eo is “echo” and CFU-E is “yankee”, since the speech model doesn’t know the colony names.</dd>
+        <dt>granulocyte macrophage</dt><dd>Counts one CFU-GM. Say it in one breath, or say “GM”</dd>
+        <dt>macrophage macrophage burst</dt><dd>Counts three at once</dd>
+        <dt>mike mike mike mike</dt><dd>Counts four. With the on-device engine, repeats are just repeats.</dd>
+        <dt>undo three</dt><dd>Removes the last three counts (a number also works with a call word: “four mikes”)</dd>
+        <dt>tally</dt><dd>Adds to a general tally, for counting anything (so does “alpha”)</dd>
+        <dt>undo / scratch</dt><dd>Removes the last count</dd>
+        <dt>next plate</dt><dd>Starts a new plate</dd>
+        <dt>Keys 1–9</dt><dd>Count the matching tile</dd>
+        <dt>Backspace</dt><dd>Undo</dd>
+        <dt>Misheard word</dt><dd>You’ll hear a soft tone and the word appears under Heard. Pick the type it should count as, and it will from then on.</dd>
+      </dl>
+      <p class="diag"><button class="btn small" id="diagBtn">Copy speech diagnostics</button> If counts ever look wrong, this copies exactly what the browser sent, so the cause can be traced.</p>
+    </details>
+  </div>
+
+  <div class="foot">
+    <span>Counts are saved in this browser. Download the CSVs to keep a permanent copy.</span>
+    <button class="btn danger reset-btn" id="resetBtn">Start a new assay</button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+"use strict";
+const STORE_KEY = "colonycall:v3";
+const PALETTE = ["#1F7A6D","#3F51B5","#A86B12","#C2185B","#D84315","#B3261E","#8E3B7A","#546E7A","#2E7D32","#00838F","#6D4C41"];
+const DEFAULT_CATS = [
+  {word:"granulocyte", label:"CFU-G", short:"G", alt:["golf","g"], color:"#1F7A6D"},
+  {word:"macrophage", label:"CFU-M", short:"M", alt:["mike","m"], color:"#3F51B5"},
+  {word:"granulocyte macrophage", label:"CFU-GM", short:"GM", alt:["delta","gm","duo"], color:"#A86B12"},
+  {word:"echo", label:"CFU-Eo", short:"Eo", alt:["eo","e o"], color:"#C2185B", note:"“eosinophil” isn’t in the speech model’s dictionary, so the NATO word is used"},
+  {word:"yankee", label:"CFU-E", short:"E", alt:["e"], color:"#D84315", note:"“erythroid” isn’t in the speech model’s dictionary, so the NATO word is used"},
+  {word:"burst", label:"BFU-E", short:"BFU-E", alt:["bravo","bfu","bfue","bfu e"], color:"#B3261E"},
+  {word:"mixed", label:"CFU-GEMM", short:"GEMM", alt:["charlie","gemm","gem","mix","combo"], color:"#8E3B7A"},
+  {word:"tally", label:"Tally", short:"Tally", alt:["alpha"], color:"#546E7A", tally:true}
+];
+const NATO_WORDS = ["alpha","bravo","charlie","delta","echo","foxtrot","golf","hotel","india","juliet","kilo","lima","mike","november","oscar","papa","quebec","romeo","sierra","tango","uniform","victor","whiskey","xray","yankee","zulu"];
+/* common speech-to-text spellings of each call word */
+const HEARD_AS = {g:["gee","jee"],m:["em"],e:["ee"],alpha:["alfa"],charlie:["charley","charlies"],delta:["deltas"],echo:["echoes","eko"],golf:["gulf","golfe","cough","coff","goff","golfs"],
+  juliet:["juliett","juliette"],mike:["mic","mikes","mick"],papa:["poppa"],whiskey:["whisky"],yankee:["yankees","yanky"],bravo:["bravos"],oscar:["oscars"]};
+const UNDO = new Set(["undo","scratch","delete"]);
+const PLATE_A = new Set(["next","new"]);
+const PLATE_B = new Set(["plate","plates","dish","dishes"]);
+const IGNORE = new Set(["comma"]);
+/* "three mikes", "mike three", "mike times three", "undo two": a number multiplies the call word next to it.
+   Speech recognition is far more reliable at numbers than at the same word repeated quickly. */
+const NUMBERS = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20};
+const MAX_MULT = 30;
+const MULT_LINK = new Set(["times","x","time"]);
+function numOf(t){
+  if(!t) return 0;
+  if(NUMBERS[t]) return NUMBERS[t];
+  const m = /^x?(\d{1,2})x?$/.exec(t);
+  if(m){ const n = +m[1]; return n >= 1 && n <= MAX_MULT ? n : 0; }
+  return 0;
+}
+const COMMANDS = new Set(["undo","scratch","delete","next","new","plate","plates","dish","dishes","comma","times"].concat(Object.keys(NUMBERS)));
+
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cap = w => w === "xray" ? "X-ray" : w.charAt(0).toUpperCase() + w.slice(1);
+
+/* ---------- state ---------- */
+const defaultCats = () => DEFAULT_CATS.map(c => ({id:uid(), ...c, alt:[...c.alt]}));
+function fresh(){
+  const p = {id:uid(), name:"Plate 1"};
+  return {v:6, assay:"", cats:defaultCats(), plates:[p], cur:p.id, entries:[], heard:[], opts:{sound:true, missSound:true, engine:"local"}};
+}
+function load(){
+  try{
+    let raw = localStorage.getItem(STORE_KEY), migrate = false;
+    if(!raw){ raw = localStorage.getItem("colonycall:v2"); migrate = !!raw; }
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(migrate && s && Array.isArray(s.cats)){
+      /* keep counts from the previous version: reuse ids for the default types, keep custom ones */
+      const byLabel = {}; s.cats.forEach(c => { byLabel[c.label] = c.id; });
+      const keep = s.cats.filter(c => !DEFAULT_CATS.some(d => d.label === c.label));
+      s.cats = defaultCats().map(c => byLabel[c.label] ? {...c, id:byLabel[c.label]} : c).concat(keep);
+    }
+    if(!s || !Array.isArray(s.plates) || !s.plates.length || !Array.isArray(s.cats) || !Array.isArray(s.entries)) return null;
+    if(!(s.v >= 4)){
+      /* earlier defaults used "cfu g" etc.; switch those to plain letters */
+      s.cats.forEach(c => { c.alt = (c.alt || []).map(a => /^cfu [gme]$/.test(a) ? a.slice(4) : a).filter(a => !/^cfu /.test(a)); });
+      s.v = 4;
+    }
+    if(!(s.v >= 5)){
+      /* put NATO words first in each type's extra words */
+      const isNato = a => NATO_WORDS.includes(a) ? 1 : 0;
+      s.cats.forEach(c => { if(Array.isArray(c.alt)) c.alt.sort((a, b) => isNato(b) - isNato(a)); });
+      s.v = 5;
+    }
+    if(!(s.v >= 6)){
+      /* "eosinophil" and "erythroid" aren't in the on-device model's dictionary: make the NATO word the main call word */
+      const swap = {"CFU-Eo":"echo", "CFU-E":"yankee"};
+      s.cats.forEach(c => {
+        const nato = swap[c.label];
+        if(nato && (c.alt || []).includes(nato) && !NATO_WORDS.includes(c.word)){
+          const d = DEFAULT_CATS.find(x => x.label === c.label);
+          c.alt = c.alt.filter(a => a !== nato && a !== c.word); c.word = nato; if(d) c.note = d.note;
+        }
+      });
+      s.v = 6;
+    }
+    s.opts = Object.assign({sound:true, missSound:true, engine:"local"}, s.opts || {});
+    if(!Array.isArray(s.heard)) s.heard = [];
+    if(!s.plates.some(p => p.id === s.cur)) s.cur = s.plates[0].id;
+    return s;
+  }catch(e){ return null; }
+}
+let state = load() || fresh();
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+const catById = id => state.cats.find(c => c.id === id);
+const curPlate = () => state.plates.find(p => p.id === state.cur);
+/* undone calls stay in the record (marked with x = time undone) but no longer count */
+const plateEntries = pid => state.entries.filter(e => e.p === pid && !e.x);
+const plateAll = pid => state.entries.filter(e => e.p === pid);
+/* plurals: "granulocytes" matches "granulocyte" */
+const norm = t => (t.length > 3 && /[^s]s$/.test(t)) ? t.slice(0, -1) : t;
+const phraseKey = p => String(p).toLowerCase().replace(/x[\s-]?ray/g, "xray").replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean).map(norm).join(" ");
+const cleanPhrase = s => String(s).toLowerCase().replace(/-/g, " ").replace(/[^a-z\s]/g, "").replace(/\s+/g, " ").trim();
+let MAXLEN = 1;
+function wordMap(){
+  const m = {};
+  MAXLEN = 1;
+  const put = (p, id) => { const k = phraseKey(p); if(k){ m[k] = id; MAXLEN = Math.max(MAXLEN, k.split(" ").length); } };
+  /* priority: built-in mishearings < extra words < main call word */
+  state.cats.forEach(c => [c.word].concat(c.alt || []).forEach(f => (HEARD_AS[f] || []).forEach(w => put(w, c.id))));
+  state.cats.forEach(c => (c.alt || []).forEach(w => put(w, c.id)));
+  state.cats.forEach(c => put(c.word, c.id));
+  return m;
+}
+function takenBy(p, cat){
+  const k = phraseKey(p);
+  if(COMMANDS.has(k)) return true;
+  return state.cats.some(x => x !== cat && (phraseKey(x.word) === k || (x.alt || []).some(a => phraseKey(a) === k)));
+}
+let WORDS = wordMap();
+
+/* ---------- feedback ---------- */
+let toastTimer = null;
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), Math.max(2600, msg.length * 55));
+}
+let actx = null;
+function beep(kind){
+  if(!state.opts.sound) return;
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === "suspended") actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain(), now = actx.currentTime;
+    o.type = "sine";
+    o.frequency.value = {ok:880, undo:520, plate:660}[kind] || 880;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.14, now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+    o.connect(g); g.connect(actx.destination);
+    o.start(now); o.stop(now + 0.2);
+  }catch(e){}
+}
+
+/* ---------- actions ---------- */
+function addEntry(catId, src, uttId){ addEntries(catId, 1, src, uttId); }
+/* n counts of one type from a single call ("three mikes"): one beep, n chips in the stream */
+function addEntries(catId, n, src, uttId){
+  const c = catById(catId); if(!c) return;
+  n = Math.max(1, Math.min(MAX_MULT, n | 0));
+  const now = Date.now();
+  for(let i = 0; i < n; i++) state.entries.push({id:uid(), p:state.cur, k:c.id, l:c.label, s:c.short, t:now, src, u:uttId || null});
+  save(); render(); beep("ok");
+  const tile = document.querySelector('.tile[data-id="' + c.id + '"]');
+  if(tile){ tile.classList.remove("bump"); void tile.offsetWidth; tile.classList.add("bump"); }
+}
+/* removes the most recent counted call on this plate, whatever the Heard box shows */
+function undo(how, uttId){
+  for(let i = state.entries.length - 1; i >= 0; i--){
+    const e = state.entries[i];
+    if(e.p === state.cur && !e.x){
+      e.x = Date.now(); e.xby = how || "button"; e.xu = uttId || null;
+      const c = catById(e.k);
+      save(); render(); beep("undo"); toast("Undid one " + (c ? c.label : e.l) + ". It stays in the call log, marked as undone.");
+      return c ? c.label : e.l;
+    }
+  }
+  toast("Nothing to undo on this plate");
+  return null;
+}
+function newPlate(){
+  const names = new Set(state.plates.map(p => p.name));
+  let n = state.plates.length + 1;
+  while(names.has("Plate " + n)) n++;
+  const p = {id:uid(), name:"Plate " + n};
+  state.plates.push(p); state.cur = p.id;
+  save(); render(); beep("plate"); toast("Started " + p.name);
+  const tab = document.querySelector('.plate-tab[aria-current="true"]');
+  if(tab) tab.scrollIntoView({block:"nearest", inline:"nearest"});
+}
+function selectPlate(id){
+  if(!state.plates.some(p => p.id === id)) return;
+  state.cur = id; save(); render();
+}
+
+/* ---------- speech parsing ---------- */
+function tokenize(text){
+  return text.toLowerCase().replace(/x[\s-]?ray/g, "xray").replace(/'s\b/g, "")
+    .replace(/[,.?!;:"'’\-]/g, " ").split(/\s+/).filter(Boolean);
+}
+const isKnownTok = t => !!WORDS[norm(t)] || UNDO.has(t) || PLATE_A.has(t) || PLATE_B.has(t) || IGNORE.has(t) || !!numOf(t) || MULT_LINK.has(t);
+function scoreAlt(text){
+  const toks = tokenize(text); let k = 0;
+  toks.forEach(t => { if(isKnownTok(t)) k++; });
+  return k - (toks.length - k) * 0.6;
+}
+function processUtterance(text){
+  let missedNow = false;
+  /* every utterance is kept for review: what was said, what it counted, what wasn't recognized */
+  const u = {id:uid(), p:state.cur, t:Date.now(), text:String(text).trim(), did:[], miss:[]};
+  const toks = tokenize(text);
+  /* pend: a number said before a call word ("three mikes"); last: the call word just counted,
+     so a number after it ("mike three", "mike times three") can top it up */
+  let pend = 0, last = null;
+  for(let i = 0; i < toks.length; i++){
+    const t = toks[i];
+    if(PLATE_A.has(t) && PLATE_B.has(toks[i+1])){ newPlate(); u.did.push("next plate"); i++; last = null; pend = 0; continue; }
+    const n = numOf(t);
+    if(n){
+      if(last && !last.numbered){
+        if(last.undo){
+          for(let j = 1; j < n; j++){ const r = undo("voice", u.id); if(!r) break; last.removed.push(r); }
+          u.did[last.di] = "undo ×" + last.removed.length + " (removed " + last.removed.join(", ") + ")";
+        }
+        else if(n > 1){ addEntries(last.cat, n - 1, "voice", u.id); u.did[last.di] = catById(last.cat).label + " ×" + n; }
+        last.numbered = true;
+      }else pend = n;
+      continue;
+    }
+    if(MULT_LINK.has(t) && last) continue;
+    /* longest phrase first, so "granulocyte macrophage" beats "granulocyte" */
+    let hit = null, len = 0;
+    for(let L = Math.min(MAXLEN, toks.length - i); L >= 1 && !hit; L--){
+      const k = toks.slice(i, i + L).map(norm).join(" ");
+      if(WORDS[k]){ hit = WORDS[k]; len = L; }
+    }
+    if(hit){
+      const m = pend || 1;
+      addEntries(hit, m, "voice", u.id); u.did.push(catById(hit).label + (m > 1 ? " ×" + m : ""));
+      last = {cat:hit, di:u.did.length - 1, numbered:pend > 0}; pend = 0; i += len - 1; continue;
+    }
+    if(UNDO.has(t)){
+      let m = pend || 1, removed = [];
+      for(let j = 0; j < m; j++){ const r = undo("voice", u.id); if(!r) break; removed.push(r); }
+      u.did.push(removed.length ? "undo" + (removed.length > 1 ? " ×" + removed.length : "") + " (removed " + removed.join(", ") + ")" : "undo (nothing to remove)");
+      last = removed.length ? {undo:true, removed, di:u.did.length - 1, numbered:pend > 0} : null; pend = 0; continue;
+    }
+    if(!IGNORE.has(t) && !FILLER.has(t) && !PLATE_A.has(t) && !PLATE_B.has(t) && t !== "a" && t !== "i"){ noteMissed(t); u.miss.push(t); missedNow = true; last = null; }
+  }
+  if(pend) u.miss.push(pend + " (number with no call word)");
+  if(u.text){ state.heard.push(u); save(); }
+  renderTeach();
+  if(missedNow) signalMiss();
+}
+/* gentle feedback when something wasn't recognized: amber outline + quiet two-note tone */
+let missTimer = null;
+function signalMiss(){
+  const box = $("heard").parentElement;
+  box.classList.remove("miss"); void box.offsetWidth; box.classList.add("miss");
+  clearTimeout(missTimer); missTimer = setTimeout(() => box.classList.remove("miss"), 1800);
+  if(state.opts.missSound !== false) softTone();
+}
+function softTone(){
+  try{
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if(actx.state === "suspended") actx.resume();
+    const now = actx.currentTime;
+    [[392, 0], [330, 0.1]].forEach(([f, d]) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, now + d);
+      g.gain.exponentialRampToValueAtTime(0.045, now + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + d + 0.14);
+      o.connect(g); g.connect(actx.destination);
+      o.start(now + d); o.stop(now + d + 0.16);
+    });
+  }catch(e){}
+}
+const FILLER = new Set(["the","and","um","uh","oh","okay","ok","so","is","it","to","of","an","in","on","that","this","yeah","yes","no","hmm","mm"]);
+let missed = [];
+function noteMissed(t){ missed = [t].concat(missed.filter(x => x !== t)).slice(0, 4); }
+function renderTeach(){
+  const box = $("teach");
+  if(!missed.length){ box.hidden = true; box.innerHTML = ""; return; }
+  const opts = '<option value="">Count as…</option>' + state.cats.map(c => '<option value="' + c.id + '">' + esc(cap(c.word) + " (" + c.label + ")") + "</option>").join("");
+  box.innerHTML = '<span class="field-label">Didn’t match a call word:</span>' + missed.map(w =>
+    '<span class="teach-item"><b>' + esc(w) + '</b><select data-w="' + esc(w) + '" aria-label="Count ' + esc(w) + ' as">' + opts + '</select>' +
+    '<button class="btn small" data-dismiss="' + esc(w) + '">Ignore</button></span>').join("");
+  box.hidden = false;
+}
+
+/* ---------- speech recognition ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false, netFails = 0, lastFinal = "";
+/* per listening session: the words already counted, and how many finished pieces the browser had sent */
+const LOCAL_FILE = location.protocol === "file:";
+let restartSoon = false, repeatRun = 0, lastWordKey = "";
+let counted = [], finalsSeen = 0, repeatMode = false, heardTimer = null;
+/* last few hundred raw results from the browser, for diagnosing counting problems */
+const speechLog = [];
+function logSpeech(ev){
+  try{
+    speechLog.push({t:new Date().toISOString(), idx:ev.resultIndex,
+      results:Array.from(ev.results).map(r => (r.isFinal ? "final: " : "interim: ") + r[0].transcript)});
+    if(speechLog.length > 300) speechLog.shift();
+  }catch(e){}
+}
+function firstWord(){ const c = state.cats[0]; return c ? c.word : "golf"; }
+function showMicMsg(msg){ const m = $("micMsg"); if(msg){ m.textContent = msg; m.hidden = false; } else { m.hidden = true; } }
+function updateMicUI(){
+  const b = $("micBtn");
+  b.setAttribute("aria-pressed", listening ? "true" : "false");
+  b.setAttribute("aria-label", listening ? "Stop listening" : "Start listening");
+  const avail = engineLocal() || SR;
+  $("micState").textContent = listening ? (vLoading ? "Starting…" : "Listening") : (avail ? "Not listening" : "Voice input unavailable");
+  const c = state.cats[0];
+  if(listening && vLoading) return;
+  $("micSub").textContent = listening ? "Say a call word for each colony. Press again to stop." + (engineLocal() ? " Counts appear at each short pause." : "")
+    : (avail ? "Press to start, then say “" + firstWord() + "”" + (c ? " to count a " + c.label : "") + "."
+          : "Use the tiles or keys 1–9 to count.");
+}
+function setHeard(final, interim){
+  const h = $("heard");
+  if(!final && !interim){ h.innerHTML = '<span class="interim">' + (listening ? "Listening…" : "Nothing yet") + "</span>"; return; }
+  h.innerHTML = (final ? esc(final) : "") + (interim ? ' <span class="interim">' + esc(interim) + "</span>" : "");
+}
+/* ---------- on-device engine (Vosk, WebAssembly) ----------
+   Loads vosk.js and model.tar.gz from the same folder as this page. The recognizer is given a
+   grammar of just the call words and commands, so it can only ever output those (or [unk]),
+   and repeated words are plain repeated matches. Audio never leaves the computer. */
+const MODEL_FILE = "model.tar.gz", VOSK_FILE = "vosk.js", WORDS_FILE = "model-words.txt";
+const VOSK_CDN = "https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js";
+let vModel = null, vRec = null, vStream = null, vCtx = null, vNode = null, vSrc = null, vLoading = false, vPartial = "";
+let modelVocab = null; /* Set of words the model knows, from model-words.txt, if present */
+const engineLocal = () => state.opts.engine !== "cloud";
+function fileHere(name){ return new URL(name, location.href).toString(); }
+function loadScript(src){
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("could not load " + src)); document.head.appendChild(s); });
+}
+async function ensureVoskLib(){
+  if(window.Vosk) return;
+  try{ await loadScript(fileHere(VOSK_FILE)); }catch(e){ await loadScript(VOSK_CDN); }
+  if(!window.Vosk) throw new Error("vosk.js did not load");
+}
+/* like Vosk.createModel, but also fails on the worker's error event and on a timeout, instead of hanging */
+function loadModel(url){
+  return new Promise((res, rej) => {
+    let done = false;
+    const m = new Vosk.Model(url, -1);
+    const timer = setTimeout(() => { if(!done){ done = true; try{ m.terminate(); }catch(e){} rej(new Error("the model took too long to load; check the internet connection on the first run, or run the launcher again")); } }, 180000);
+    m.on("load", msg => { if(done) return; done = true; clearTimeout(timer); if(msg.result) res(m); else { try{ m.terminate(); }catch(e){} rej(new Error("the model file could not be read")); } });
+    m.on("error", msg => { if(done) return; done = true; clearTimeout(timer); try{ m.terminate(); }catch(e){} rej(new Error(String(msg && msg.error || "model error"))); });
+  });
+}
+function grammarWords(){
+  const set = new Set();
+  const add = p => { phraseKey(p).split(" ").forEach(w => { if(w) set.add(w); }); };
+  state.cats.forEach(c => { add(c.word); (c.alt || []).forEach(add); });
+  [...UNDO, ...PLATE_A, ...PLATE_B].forEach(w => set.add(w));
+  const words = [...set];
+  const phrases = state.cats.filter(c => phraseKey(c.word).includes(" ")).map(c => phraseKey(c.word));
+  return words.concat(phrases, ["[unk]"]);
+}
+async function loadVocab(){
+  if(modelVocab !== null) return;
+  try{
+    const r = await fetch(fileHere(WORDS_FILE), {cache:"no-store"});
+    modelVocab = r.ok ? new Set((await r.text()).split(/\s+/).filter(Boolean)) : false;
+  }catch(e){ modelVocab = false; }
+}
+function unknownWords(){
+  if(!modelVocab) return [];
+  const out = [];
+  state.cats.forEach(c => [c.word].concat(c.alt || []).forEach(p => {
+    const ws = phraseKey(p).split(" ");
+    if(ws.some(w => !modelVocab.has(w))) out.push(p);
+  }));
+  return out;
+}
+function renderEngine(){
+  $("engLocal").checked = engineLocal(); $("engCloud").checked = !engineLocal();
+  const st = $("engStatus"); st.classList.remove("warn");
+  if(!engineLocal()){ st.textContent = SR ? "Using the browser’s dictation service." : "This browser has no dictation service. Switch to the on-device engine, or use the tiles and keys."; return; }
+  if(LOCAL_FILE){ st.classList.add("warn"); st.textContent = "This page was opened as a file, so the on-device engine can’t load its model. Double-click “Open ColonyCaller.command” to open it the right way."; return; }
+  const unk = unknownWords();
+  const unkMsg = unk.length ? " The model doesn’t know these call words, so they won’t be heard: " + unk.join(", ") + ". Use each type’s other words for those (the NATO words always work), or edit the list above." : "";
+  if(unk.length) st.classList.add("warn");
+  if(vModel) st.textContent = (vGrammarOk ? "Speech model loaded and ready." : "Speech model loaded. It can’t be limited to the call words, so it listens for all words; unrelated words are shown but not counted.") + unkMsg;
+  else if(vLoading) st.textContent = "Loading the speech model…";
+  else st.textContent = "The model loads when you press the microphone. The first time takes a few seconds; after that it is cached by the browser." + unkMsg;
+}
+let vGrammarOk = true, vResults = 0, silenceTimer = null;
+const VIRTUAL_RX = /virtual|background music|blackhole|soundflower|loopback|zoomaudio|teams audio|aggregate|vb-?cable|obs/i;
+async function listMics(){
+  const sel = $("micSel"); if(!sel || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try{
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+    const cur = vStream && vStream.getAudioTracks()[0] ? vStream.getAudioTracks()[0].getSettings().deviceId : state.opts.micId;
+    sel.innerHTML = '<option value="">System default microphone</option>' + devs.map((d, i) =>
+      '<option value="' + esc(d.deviceId) + '"' + (d.deviceId === cur ? " selected" : "") + ">" + esc(d.label || ("Microphone " + (i + 1))) + "</option>").join("");
+    if(!cur) sel.value = "";
+    $("micRow").hidden = false;
+    vlog({event:"devices", inputs:devs.map(d => d.label || d.deviceId.slice(0, 8))});
+  }catch(e){}
+}
+function vlog(entry){ speechLog.push(Object.assign({t:new Date().toISOString(), engine:"local"}, entry)); if(speechLog.length > 300) speechLog.shift(); }
+function makeRecognizer(useGrammar){
+  if(!vModel || !vCtx) return;
+  if(vRec){ try{ vRec.remove(); }catch(e){} vRec = null; }
+  if(useGrammar === undefined) useGrammar = vGrammarOk;
+  const r = useGrammar ? new vModel.KaldiRecognizer(vCtx.sampleRate, JSON.stringify(grammarWords())) : new vModel.KaldiRecognizer(vCtx.sampleRate);
+  vlog({event:"recognizer", sampleRate:vCtx.sampleRate, grammar:useGrammar});
+  r.on("result", m => {
+    const raw = m.result && m.result.text || "";
+    vlog({final:raw}); vResults++;
+    const text = raw.replace(/\[unk\]/g, "").trim();
+    vPartial = "";
+    if(!text){
+      if(/\[unk\]/.test(raw)){ setHeard("?", ""); signalMiss(); }
+      else setHeard("", "");
+      return;
+    }
+    lastFinal = text + (/\[unk\]/.test(raw) ? " ?" : ""); processUtterance(text); setHeard(lastFinal, "");
+    clearTimeout(heardTimer); heardTimer = setTimeout(() => { lastFinal = ""; setHeard("", vPartial); }, 3000);
+  });
+  r.on("partialresult", m => {
+    const p = (m.result && m.result.partial || "").replace(/\[unk\]/g, "?").trim();
+    if(p === vPartial) return;
+    vPartial = p; setHeard(lastFinal, p);
+  });
+  r.on("error", m => {
+    const err = String(m && m.error || "recognizer error");
+    vlog({error:err});
+    if(useGrammar && /not supported|grammar|Gr\.fst|HCLr/i.test(err)){
+      /* this model can't take a word list; fall back to free recognition, our parser still filters */
+      vGrammarOk = false; makeRecognizer(false); renderEngine();
+      toast("This speech model can’t be limited to the call words, so it is listening for all words instead.");
+      return;
+    }
+    showMicMsg("The on-device recognizer reported: " + err.split("\n")[0] + ". Press “Copy speech diagnostics” and share it so this can be fixed. Meanwhile you can switch to browser dictation below.");
+  });
+  vRec = r;
+}
+/* microphone level meter, so it is obvious whether audio is reaching the engine */
+let vLevel = 0;
+function meterTick(samples){
+  let s = 0; for(let i = 0; i < samples.length; i += 8) s += samples[i] * samples[i];
+  const rms = Math.sqrt(s / (samples.length / 8));
+  vLevel = Math.max(rms * 4, vLevel * 0.8);
+  const bar = $("micLevel"); if(bar) bar.style.setProperty("--lvl", Math.min(1, vLevel).toFixed(2));
+}
+async function startLocal(){
+  if(LOCAL_FILE){ showMicMsg("The on-device engine can’t run from a file:// page. Double-click “Open ColonyCaller.command” to open ColonyCaller over localhost, or switch the speech engine to browser dictation below."); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ showMicMsg("This browser can’t access the microphone here. The tiles and keys 1–9 still work."); return; }
+  listening = true; vLoading = true; showMicMsg(""); updateMicUI(); renderEngine();
+  try{
+    if(!vModel){
+      $("micSub").textContent = "Loading the speech engine…";
+      await ensureVoskLib();
+      $("micSub").textContent = "Loading the speech model (first time only)…";
+      let url = fileHere(MODEL_FILE);
+      const head = await fetch(url, {method:"HEAD", cache:"no-store"}).catch(() => null);
+      if(!head || !head.ok) throw new Error("nomodel");
+      /* the engine caches the unpacked model by URL; include the file's size so a swapped model file is noticed */
+      const len = head.headers.get("content-length"), mod = head.headers.get("last-modified");
+      url += "?v=" + encodeURIComponent((len || "") + "-" + (mod || "").replace(/\W/g, ""));
+      vlog({event:"model", url});
+      vModel = await loadModel(url);
+      await loadVocab();
+    }
+    if(!listening) return; /* stopped while loading */
+    const audio = {channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true};
+    if(state.opts.micId) audio.deviceId = {exact:state.opts.micId};
+    try{ vStream = await navigator.mediaDevices.getUserMedia({audio, video:false}); }
+    catch(e){ if(state.opts.micId && e && (e.name === "OverconstrainedError" || e.name === "NotFoundError")){ state.opts.micId = ""; save(); vStream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1}, video:false}); } else throw e; }
+    let track = vStream.getAudioTracks()[0], ts = track ? track.getSettings() : {};
+    vlog({event:"mic", label:track && track.label, settings:ts, muted:track && track.muted, enabled:track && track.enabled});
+    /* Chrome's "default" input can be a virtual device (Background Music, Zoom, Teams, BlackHole…) that
+       carries no microphone signal. If no mic was chosen and the default looks virtual, switch to a real one. */
+    if(!state.opts.micId && track && VIRTUAL_RX.test(track.label)){
+      try{
+        const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput" && d.deviceId && d.deviceId !== "default" && d.deviceId !== "communications");
+        const real = devs.find(d => /built-in|internal|macbook|imac|usb|headset|airpods|external/i.test(d.label) && !VIRTUAL_RX.test(d.label)) || devs.find(d => !VIRTUAL_RX.test(d.label));
+        if(real){
+          const s2 = await navigator.mediaDevices.getUserMedia({audio:Object.assign({}, audio, {deviceId:{exact:real.deviceId}}), video:false});
+          vStream.getTracks().forEach(t => t.stop());
+          vStream = s2; track = s2.getAudioTracks()[0]; ts = track.getSettings();
+          state.opts.micId = real.deviceId; save();
+          vlog({event:"mic switched", from:"virtual default", to:track.label});
+          toast("Using “" + track.label + "” instead of the virtual device Chrome picked. Change it in the Speech engine section if needed.");
+        }
+      }catch(e){ vlog({error:"mic switch: " + (e && e.message)}); }
+    }
+    await listMics();
+    /* same audio path as the library's own demo: the page's default rate, the engine resamples */
+    vCtx = vCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if(vCtx.state === "suspended") await vCtx.resume();
+    makeRecognizer();
+    vSrc = vCtx.createMediaStreamSource(vStream);
+    vNode = vCtx.createScriptProcessor(4096, 1, 1);
+    let chunks = 0, maxLvl = 0;
+    vNode.onaudioprocess = ev => {
+      const ch = ev.inputBuffer.getChannelData(0);
+      meterTick(ch); maxLvl = Math.max(maxLvl, vLevel);
+      if(vRec){ try{ vRec.acceptWaveform(ev.inputBuffer); chunks++; if(chunks <= 12 || chunks % 50 === 0) vlog({event:"audio", chunks, rate:ev.inputBuffer.sampleRate, level:vLevel.toFixed(3), max:maxLvl.toFixed(3)}); }catch(e){ vlog({error:"acceptWaveform: " + (e && e.message)}); } }
+    };
+    vSrc.connect(vNode); vNode.connect(vCtx.destination);
+    $("micLevel").hidden = false;
+    /* if nothing at all arrives for a few seconds, say so, naming the device */
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      if(listening && vStream && maxLvl < 0.002){
+        showMicMsg("No sound is reaching the page from “" + (track && track.label || "the microphone") + "”. Try another microphone in the Speech engine section below. If every microphone is silent, macOS may be blocking Chrome: System Settings → Privacy & Security → Microphone, make sure Google Chrome is on, then quit and reopen Chrome.");
+        vlog({event:"silent", seconds:6, max:maxLvl});
+      }
+    }, 6000);
+    if(track) track.onmute = () => vlog({event:"track muted"});
+    vLoading = false; updateMicUI(); renderEngine(); setHeard("", "");
+  }catch(e){
+    vLoading = false; listening = false; stopLocalAudio(); updateMicUI(); renderEngine();
+    if(e && e.name === "NotAllowedError") showMicMsg("Microphone access is blocked. Allow the microphone for this page in Chrome’s site settings (the icon left of the address bar).");
+    else if(e && e.name === "NotFoundError") showMicMsg("No microphone was found. Connect one, then press the microphone button.");
+    else if(e && e.message === "nomodel") showMicMsg("The speech model (" + MODEL_FILE + ") isn’t next to this page. Run “Open ColonyCaller.command” once with an internet connection and it will fetch it (about 40 MB). Or switch the speech engine to browser dictation below.");
+    else showMicMsg("The on-device engine couldn’t start (" + (e && e.message || e) + "). You can switch to browser dictation below.");
+  }
+}
+function stopLocalAudio(){
+  try{ vNode && vNode.disconnect(); }catch(e){}
+  try{ vSrc && vSrc.disconnect(); }catch(e){}
+  try{ vStream && vStream.getTracks().forEach(t => t.stop()); }catch(e){}
+  if(vRec){ try{ vRec.remove(); }catch(e){} }
+  vNode = vSrc = vStream = vRec = null; vPartial = ""; vLevel = 0; clearTimeout(silenceTimer);
+  const bar = $("micLevel"); if(bar){ bar.hidden = true; bar.style.setProperty("--lvl", "0"); }
+}
+function startListening(){
+  if(engineLocal()){ startLocal(); return; }
+  if(!SR){ showMicMsg("Browser dictation needs Chrome, Edge, or Safari. Switch to the on-device engine, or use the tiles and keys 1–9."); return; }
+  try{ actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); }catch(e){}
+  if(!rec){
+    rec = new SR();
+    /* Continuous listening, so the browser asks for the microphone once per session.
+       Browsers report finished speech in one of two ways: as separate pieces ("mike", "mike")
+       or with each piece repeating everything before it ("mike", "mike mike"). Everything is
+       compared word by word with what was already counted, and only new words are tallied. */
+    rec.lang = "en-US"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+    rec.onstart = () => { counted = []; finalsSeen = 0; repeatRun = 0; lastWordKey = ""; };
+    rec.onresult = ev => {
+      logSpeech(ev);
+      const finals = [], live = [];
+      for(let i = 0; i < ev.results.length; i++){
+        const r = ev.results[i];
+        if(r.isFinal) finals.push(tokenize(r[0].transcript)); else live.push(r[0].transcript);
+      }
+      let add = null;
+      if(finals.length){
+        const all = [].concat(...finals), last = finals[finals.length - 1];
+        const extOf = c => (c.length > counted.length && counted.every((t, k) => c[k] === t)) ? c.slice(counted.length) : null;
+        const eAll = repeatMode ? null : extOf(all);
+        const eLast = finals.length > 1 || repeatMode ? extOf(last) : null;
+        if(eAll && eLast){ if(eLast.length < eAll.length){ repeatMode = true; add = eLast; } else add = eAll; }
+        else if(eLast){ if(finals.length > 1) repeatMode = true; add = eLast; }
+        else add = eAll;
+        if(add) counted = counted.concat(add);
+        else if(finals.length > finalsSeen){
+          /* the browser rewrote earlier words: count only newly finished pieces, then resync */
+          add = repeatMode ? null : [].concat(...finals.slice(finalsSeen));
+          counted = repeatMode ? last.slice() : all;
+        }
+        finalsSeen = finals.length;
+      }
+      const interim = live.join(" ").trim();
+      if(add && add.length){
+        netFails = 0;
+        lastFinal = add.join(" ");
+        processUtterance(lastFinal);
+        /* Chrome's recognizer uses what was said earlier in a session as context, and after the
+           same word twice in a row it tends to drop the next repeat. Starting a fresh session
+           clears that context, but costs a short gap in which speech is lost, so it is done only
+           after a repeat. For a run of the same colony, saying a number ("four mikes") is more
+           reliable than repeating the word. From a local file, Chrome asks for the microphone
+           again on each restart, which is why the launcher serves the page over localhost. */
+        repeatRun = lastFinal === lastWordKey ? repeatRun + 1 : 1;
+        lastWordKey = lastFinal;
+        if(repeatRun >= 2){ restartSoon = true; repeatRun = 0; try{ rec.stop(); }catch(e){} }
+        /* clear the Heard box shortly after each tally so it only ever shows the latest words */
+        clearTimeout(heardTimer);
+        heardTimer = setTimeout(() => { lastFinal = ""; setHeard("", ""); }, 3000);
+      }
+      setHeard(lastFinal, interim);
+    };
+    rec.onerror = ev => {
+      const err = ev.error;
+      if(err === "no-speech" || err === "aborted") return;
+      if(err === "not-allowed" || err === "service-not-allowed"){
+        listening = false;
+        showMicMsg("Microphone access is blocked. Allow the microphone for this page in your browser’s site settings, or open the page in its own browser tab. The tiles still work.");
+      }else if(err === "audio-capture"){
+        listening = false;
+        showMicMsg("No microphone was found. Connect one, then press the microphone button.");
+      }else if(err === "network"){
+        netFails++;
+        if(netFails > 4){ listening = false; showMicMsg("Speech recognition can’t reach its service. In Chrome and Edge it needs an internet connection. Press the microphone to try again."); }
+      }
+      updateMicUI();
+    };
+    rec.onend = () => {
+      if(listening){ const wait = netFails ? 1500 : (restartSoon ? 40 : 250); restartSoon = false; setTimeout(() => { if(listening){ try{ rec.start(); }catch(e){} } }, wait); }
+      else updateMicUI();
+    };
+  }
+  showMicMsg(LOCAL_FILE ? "Opened as a local file, so Chrome won’t remember microphone permission and may ask again after a repeated word or a pause. Double-click “Open ColonyCaller.command” instead; it opens the same page over localhost, where Chrome asks once." : ""); netFails = 0; listening = true;
+  try{ rec.start(); }catch(e){}
+  updateMicUI();
+}
+function stopListening(){
+  listening = false; vLoading = false;
+  try{ rec && rec.stop(); }catch(e){}
+  stopLocalAudio();
+  updateMicUI(); renderEngine(); setHeard("", "");
+}
+
+/* ---------- rendering ---------- */
+function counts(pid){
+  const m = {};
+  plateEntries(pid).forEach(e => { m[e.k] = (m[e.k] || 0) + 1; });
+  return m;
+}
+function goneCols(){
+  const out = [], seen = new Set();
+  state.entries.forEach(e => { if(!e.x && !catById(e.k) && !seen.has(e.k)){ seen.add(e.k); out.push({id:e.k, label:e.l}); } });
+  return out;
+}
+function renderPlates(){
+  $("plates").innerHTML = state.plates.map(p =>
+    '<button class="plate-tab" data-id="' + p.id + '" aria-current="' + (p.id === state.cur) + '">' +
+    esc(p.name) + '<span class="n">' + plateEntries(p.id).length + "</span></button>").join("") +
+    '<button class="plate-tab add" id="addPlateTab">New plate</button>';
+}
+function renderTiles(){
+  const c = counts(state.cur);
+  $("tiles").innerHTML = state.cats.map((cat, i) => {
+    const n = c[cat.id] || 0;
+    const alts = (cat.alt || []).slice(0, 3);
+    const alt = alts.length ? "or “" + alts.join("”, “") + "”" + (cat.alt.length > 3 ? " …" : "") : (cat.tally ? "count anything" : "");
+    return '<button class="tile' + (cat.tally ? " tally" : "") + '" data-id="' + cat.id + '" style="--c:' + cat.color + '" aria-label="' + esc(cap(cat.word)) + ": count one " + esc(cat.label) + ", currently " + n + '">' +
+      '<span class="tile-word">' + esc(cap(cat.word)) + (cat.note ? '<sup class="star">*</sup>' : "") + "</span>" +
+      '<span class="tile-label">' + esc(cat.label) + "</span>" +
+      '<span class="tile-alt">' + esc(alt) + "</span>" +
+      '<span class="tile-n">' + n + "</span>" +
+      (i < 9 ? "<kbd>" + (i + 1) + "</kbd>" : "") + "</button>";
+  }).join("");
+  const notes = state.cats.filter(c => c.note);
+  $("tileNotes").innerHTML = notes.map(c => "<p>* " + esc(c.label) + ": " + esc(c.note) + ".</p>").join("");
+  $("tileNotes").hidden = !notes.length;
+  const es = plateEntries(state.cur);
+  const tallyIds = new Set(state.cats.filter(x => x.tally).map(x => x.id));
+  const colonies = es.filter(e => !tallyIds.has(e.k)).length;
+  $("plateTotal").textContent = es.length;
+  const note = $("goneNote");
+  const gone = es.filter(e => !catById(e.k)).length;
+  const parts = [];
+  if(tallyIds.size && colonies !== es.length) parts.push(colonies + " colonies plus " + (es.length - colonies) + " general tally.");
+  if(gone) parts.push(gone + (gone === 1 ? " count belongs" : " counts belong") + " to a type you removed; it still appears in the table and exports.");
+  if(parts.length){ note.textContent = parts.join(" "); note.hidden = false; note.style.color = gone ? "" : "var(--muted)"; }
+  else note.hidden = true;
+  const pn = $("plateName");
+  if(document.activeElement !== pn) pn.value = curPlate().name;
+}
+function renderStream(){
+  const all = plateAll(state.cur), active = all.filter(e => !e.x), nx = all.length - active.length;
+  $("streamCount").textContent = all.length ? active.length + " counted" + (nx ? ", " + nx + " undone" : "") : "";
+  if(!all.length){ $("stream").innerHTML = '<p class="empty">No calls yet. Counts appear here in the order you say them.</p>'; return; }
+  const shown = all.slice(-80);
+  const lastActive = shown.slice().reverse().find(e => !e.x);
+  $("stream").innerHTML = (all.length > 80 ? '<span class="chip more">+' + (all.length - 80) + " earlier</span>" : "") +
+    shown.map(e => {
+      const c = catById(e.k), name = c ? c.label : e.l;
+      return '<span class="chip' + (c ? "" : " gone") + (e.x ? " undone" : "") + (e === lastActive ? " latest" : "") + '"' +
+        (c ? ' style="--c:' + c.color + '"' : "") + ' title="' + esc(name + (e.x ? " (undone)" : "")) + '">' + esc(c ? c.short : e.s) + "</span>";
+    }).join("");
+}
+function renderSummary(){
+  const cols = state.cats.map(c => ({id:c.id, head:c.label, color:c.color})).concat(goneCols().map(g => ({id:g.id, head:g.label + " (removed)", color:null})));
+  let h = "<thead><tr><th>Plate</th>" + cols.map(c => "<th>" + (c.color ? '<span class="sw" style="--c:' + c.color + '"></span>' : "") + esc(c.head) + "</th>").join("") + "<th>Total</th><th></th></tr></thead><tbody>";
+  const totals = {}; let grand = 0;
+  state.plates.forEach(p => {
+    const c = counts(p.id); let t = 0;
+    h += '<tr data-id="' + p.id + '"' + (p.id === state.cur ? ' class="cur"' : "") + "><td>" + esc(p.name) + "</td>" +
+      cols.map(col => { const v = c[col.id] || 0; t += v; totals[col.id] = (totals[col.id] || 0) + v; return "<td>" + v + "</td>"; }).join("") +
+      "<td><b>" + t + '</b></td><td class="rm">' + (state.plates.length > 1 ? '<button class="btn small" data-rm="' + p.id + '">Remove</button>' : "") + "</td></tr>";
+    grand += t;
+  });
+  h += "</tbody>";
+  if(state.plates.length > 1){
+    h += "<tfoot><tr><td>All plates</td>" + cols.map(c => "<td>" + (totals[c.id] || 0) + "</td>").join("") + "<td>" + grand + "</td><td></td></tr></tfoot>";
+  }
+  $("sumTable").innerHTML = h;
+}
+function renderCats(){
+  $("catList").innerHTML = state.cats.map((c, i) => {
+    return '<div class="cat-row" style="--c:' + c.color + '"><span class="sw" aria-hidden="true"></span>' +
+      '<input class="wd" type="text" value="' + esc(c.word) + '" data-i="' + i + '" data-f="word" autocapitalize="none" spellcheck="false" aria-label="Call word for ' + esc(c.label) + '">' +
+      '<input class="lab" type="text" value="' + esc(c.label) + '" data-i="' + i + '" data-f="label" aria-label="Name for ' + esc(cap(c.word)) + '">' +
+      '<input class="ab" type="text" value="' + esc(c.short) + '" data-i="' + i + '" data-f="short" maxlength="8" aria-label="Short code for ' + esc(cap(c.word)) + '">' +
+      '<input class="also" type="text" value="' + esc((c.alt || []).join(", ")) + '" data-i="' + i + '" data-f="alt" placeholder="separate with commas" aria-label="Other words that count as ' + esc(cap(c.word)) + '">' +
+      '<button class="btn small" data-rmcat="' + i + '">Remove</button></div>';
+  }).join("");
+  $("optSound").checked = !!state.opts.sound;
+  $("optMiss").checked = state.opts.missSound !== false;
+  renderNato();
+}
+function renderNato(){
+  const used = new Set();
+  state.cats.forEach(c => [c.word].concat(c.alt || []).forEach(p => used.add(phraseKey(p))));
+  $("natoList").innerHTML = NATO_WORDS.map((w, i) =>
+    '<li' + (used.has(w) ? ' class="used" title="In use"' : "") + "><b>" + String.fromCharCode(65 + i) + "</b><span>" + cap(w) + "</span></li>").join("");
+}
+function render(){ renderPlates(); renderTiles(); renderStream(); renderSummary(); updateMicUI(); renderTeach(); }
+
+/* ---------- export ---------- */
+const csvCell = v => { const s = String(v == null ? "" : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+const toCSV = rows => rows.map(r => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+function summaryRows(){
+  const gone = goneCols();
+  const ids = state.cats.map(c => c.id).concat(gone.map(g => g.id));
+  const rows = [["Assay", "Plate"].concat(state.cats.map(c => c.label), gone.map(g => g.label + " (removed)"), ["Total"])];
+  state.plates.forEach(p => {
+    const c = counts(p.id); let t = 0;
+    const vals = ids.map(k => { const v = c[k] || 0; t += v; return v; });
+    rows.push([state.assay, p.name].concat(vals, [t]));
+  });
+  return rows;
+}
+function fmtTime(t){
+  const d = new Date(t), pad = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+function logRows(){
+  const said = {}; state.heard.forEach(h => { said[h.id] = h.text; });
+  const how = {voice:"voice", tap:"tap", key:"keyboard", button:"Undo button", keyboard:"keyboard"};
+  const rows = [["Assay", "Plate", "Order on plate", "Type", "Short", "Time", "Input", "Heard (what was said)", "Status", "Undone at", "Undone by"]];
+  state.plates.forEach(p => {
+    plateAll(p.id).forEach((e, i) => {
+      const c = catById(e.k);
+      const by = e.x ? ((how[e.xby] || e.xby) + (e.xu && said[e.xu] ? ": " + said[e.xu] : "")) : "";
+      rows.push([state.assay, p.name, i + 1, c ? c.label : e.l, c ? c.short : e.s, fmtTime(e.t), how[e.src] || e.src,
+        e.u && said[e.u] ? said[e.u] : "", e.x ? "undone" : "counted", e.x ? fmtTime(e.x) : "", by]);
+    });
+  });
+  return rows;
+}
+function transcriptRows(){
+  const rows = [["Assay", "Plate", "Order on plate", "Time", "Heard", "Counted", "Not recognized"]];
+  state.plates.forEach(p => {
+    state.heard.filter(h => h.p === p.id).forEach((h, i) => {
+      rows.push([state.assay, p.name, i + 1, fmtTime(h.t), h.text, h.did.join("; "), h.miss.join(", ")]);
+    });
+  });
+  return rows;
+}
+function fileBase(){
+  const slug = (state.assay || "colony-assay").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "colony-assay";
+  const d = new Date(), pad = n => String(n).padStart(2, "0");
+  return slug + "_" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate());
+}
+let downloads = null;
+(async () => { try{ if(window.claude && typeof window.claude.use === "function") downloads = await window.claude.use("downloads"); }catch(e){ downloads = null; } })();
+async function saveFile(name, text){
+  if(downloads){
+    try{ await downloads.save({filename:name, data:text}); toast("Saved " + name); return; }
+    catch(e){
+      const code = e && e.code;
+      if(code === "declined"){ toast("Download cancelled"); return; }
+      if(code === "rate_limited"){ toast("A download prompt is already open"); return; }
+    }
+  }
+  try{
+    const blob = new Blob([text], {type:"text/csv"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }catch(e){ toast("Download isn’t available here. Use Copy table instead."); }
+}
+async function copyText(text, okMsg){
+  try{ await navigator.clipboard.writeText(text); toast(okMsg); return; }catch(e){}
+  try{
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove();
+    if(ok){ toast(okMsg); return; }
+  }catch(e){}
+  saveFile("colonycaller-speech-diagnostics.json", text);
+}
+async function copyTable(){
+  const tsv = summaryRows().map(r => r.join("\t")).join("\n");
+  try{ await navigator.clipboard.writeText(tsv); toast("Table copied. Paste it into Excel, Sheets, or Prism."); return; }catch(e){}
+  try{
+    const ta = document.createElement("textarea"); ta.value = tsv; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove();
+    toast(ok ? "Table copied. Paste it into Excel, Sheets, or Prism." : "Copying isn’t available here. Use a download instead.");
+  }catch(e){ toast("Copying isn’t available here. Use a download instead."); }
+}
+
+function armed(btn, label, fn){
+  if(btn.dataset.armed === "1"){ fn(); return; }
+  const orig = btn.textContent; btn.dataset.armed = "1"; btn.textContent = label;
+  setTimeout(() => { if(btn.isConnected){ btn.dataset.armed = ""; btn.textContent = orig; } }, 3500);
+}
+function catsChanged(){ WORDS = wordMap(); save(); renderCats(); render(); if(vRec) makeRecognizer(); renderEngine(); }
+
+/* ---------- events ---------- */
+$("micBtn").addEventListener("click", () => listening ? stopListening() : startListening());
+$("undoBtn").addEventListener("click", () => undo("button"));
+$("nextPlateBtn").addEventListener("click", newPlate);
+$("tiles").addEventListener("click", e => { const t = e.target.closest(".tile"); if(t) addEntry(t.dataset.id, "tap"); });
+$("plates").addEventListener("click", e => {
+  const b = e.target.closest(".plate-tab"); if(!b) return;
+  if(b.id === "addPlateTab") newPlate(); else selectPlate(b.dataset.id);
+});
+$("plateName").addEventListener("input", e => { curPlate().name = e.target.value || "Untitled plate"; save(); renderPlates(); renderSummary(); });
+$("assayName").value = state.assay || "";
+$("assayName").addEventListener("input", e => { state.assay = e.target.value; save(); });
+$("sumTable").addEventListener("click", e => {
+  const rm = e.target.closest("[data-rm]");
+  if(rm){
+    e.stopPropagation();
+    armed(rm, "Confirm", () => {
+      const id = rm.dataset.rm;
+      state.entries = state.entries.filter(x => x.p !== id);
+      state.heard = state.heard.filter(x => x.p !== id);
+      state.plates = state.plates.filter(p => p.id !== id);
+      if(state.cur === id) state.cur = state.plates[state.plates.length - 1].id;
+      save(); render(); toast("Plate removed");
+    });
+    return;
+  }
+  const tr = e.target.closest("tbody tr"); if(tr) selectPlate(tr.dataset.id);
+});
+$("copyBtn").addEventListener("click", copyTable);
+$("dlSumBtn").addEventListener("click", () => saveFile(fileBase() + "_summary.csv", toCSV(summaryRows())));
+$("dlLogBtn").addEventListener("click", () => saveFile(fileBase() + "_call-log.csv", toCSV(logRows())));
+$("dlHeardBtn").addEventListener("click", () => saveFile(fileBase() + "_transcript.csv", toCSV(transcriptRows())));
+$("diagBtn").addEventListener("click", () => copyText(JSON.stringify({browser:navigator.userAgent, engine:state.opts.engine, grammar:vGrammarOk, modelLoaded:!!vModel, results:vResults, repeatMode, events:speechLog}, null, 1), speechLog.length ? "Diagnostics copied (" + speechLog.length + " events)" : "Nothing recorded yet. Use voice input first."));
+$("catList").addEventListener("change", e => {
+  const el = e.target.closest("[data-i]"); if(!el) return;
+  const cat = state.cats[+el.dataset.i], f = el.dataset.f;
+  if(f === "word"){
+    const w = cleanPhrase(el.value);
+    if(!w){ toast("Use letters only"); el.value = cat.word; return; }
+    if(takenBy(w, cat)){ toast("“" + w + "” is already used for something else"); el.value = cat.word; return; }
+    cat.word = w; cat.alt = (cat.alt || []).filter(a => phraseKey(a) !== phraseKey(w)); delete cat.note;
+  }
+  else if(f === "alt"){
+    const list = [...new Set(el.value.split(",").map(cleanPhrase).filter(Boolean))];
+    const bad = list.filter(p => COMMANDS.has(phraseKey(p)) || state.cats.some(x => x !== cat && phraseKey(x.word) === phraseKey(p)));
+    cat.alt = list.filter(p => !bad.includes(p) && phraseKey(p) !== phraseKey(cat.word));
+    const mine = new Set(cat.alt.map(phraseKey));
+    state.cats.forEach(x => { if(x !== cat) x.alt = (x.alt || []).filter(a => !mine.has(phraseKey(a))); });
+    if(bad.length) toast("Skipped " + bad.join(", ") + ", already used for something else");
+  }
+  else if(f === "label"){ cat.label = el.value.trim() || cap(cat.word); }
+  else if(f === "short"){ cat.short = el.value.trim() || cat.label; }
+  catsChanged();
+});
+$("catList").addEventListener("click", e => {
+  const b = e.target.closest("[data-rmcat]"); if(!b) return;
+  const i = +b.dataset.rmcat, cat = state.cats[i];
+  const used = state.entries.some(x => x.k === cat.id);
+  const go = () => { state.cats.splice(i, 1); catsChanged(); toast("Removed " + cat.label + (used ? ". Its existing counts are kept." : "")); };
+  if(used) armed(b, "Confirm", go); else go();
+});
+$("addCatBtn").addEventListener("click", () => {
+  const used = new Set();
+  state.cats.forEach(c => [c.word].concat(c.alt || []).forEach(p => used.add(phraseKey(p))));
+  let word = NATO_WORDS.find(w => !used.has(w));
+  if(!word){ let n = 1; while(used.has("item" + n)) n++; word = "item" + n; }
+  state.cats.push({id:uid(), word, label:"New item", short:"New", alt:[], color:PALETTE[state.cats.length % PALETTE.length]});
+  catsChanged();
+  const labels = $("catList").querySelectorAll('input[data-f="label"]');
+  if(labels.length){ labels[labels.length - 1].focus(); labels[labels.length - 1].select(); }
+});
+$("restoreBtn").addEventListener("click", e => armed(e.currentTarget, "Replace your types? Click again", () => {
+  const byLabel = {}; state.cats.forEach(c => { byLabel[c.label] = c.id; });
+  state.cats = defaultCats().map(c => byLabel[c.label] ? {...c, id:byLabel[c.label]} : c);
+  catsChanged(); toast("Default colony types restored");
+}));
+$("optSound").addEventListener("change", e => { state.opts.sound = e.target.checked; save(); });
+$("micSel").addEventListener("change", e => {
+  state.opts.micId = e.target.value; save();
+  if(listening && engineLocal()){ stopListening(); startListening(); }
+});
+if(navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) listMics();
+["engLocal", "engCloud"].forEach(id => $(id).addEventListener("change", e => {
+  if(!e.target.checked) return;
+  const was = listening;
+  if(listening) stopListening();
+  state.opts.engine = e.target.value; save(); showMicMsg(""); renderEngine(); updateMicUI();
+  if(was) startListening();
+}));
+$("optMiss").addEventListener("change", e => { state.opts.missSound = e.target.checked; save(); if(e.target.checked) softTone(); });
+$("teach").addEventListener("change", e => {
+  const s = e.target.closest("select[data-w]"); if(!s || !s.value) return;
+  const w = s.dataset.w, c = catById(s.value); if(!c) return;
+  state.cats.forEach(x => { x.alt = (x.alt || []).filter(a => a !== w); });
+  c.alt = (c.alt || []).concat(w);
+  missed = missed.filter(x => x !== w);
+  catsChanged();
+  toast("“" + w + "” now counts as " + c.label + ". The call you just made wasn’t counted, so tap the tile to add it.");
+});
+$("teach").addEventListener("click", e => {
+  const b = e.target.closest("[data-dismiss]"); if(!b) return;
+  missed = missed.filter(x => x !== b.dataset.dismiss); renderTeach();
+});
+function resetAssay(e){
+  armed(e.currentTarget, "Clear all plates? Click again", () => {
+    stopListening();
+    const keepCats = state.cats, keepOpts = state.opts;
+    state = fresh(); state.cats = keepCats; state.opts = keepOpts; lastFinal = ""; missed = [];
+    $("assayName").value = ""; setHeard("", "");
+    catsChanged(); toast("New assay started. Your colony types are kept.");
+  });
+}
+$("resetBtn").addEventListener("click", resetAssay);
+$("resetTopBtn").addEventListener("click", resetAssay);
+document.addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "textarea" || tag === "select" || e.target.isContentEditable) return;
+  if(e.metaKey || e.ctrlKey){ if(e.key.toLowerCase() === "z"){ e.preventDefault(); undo("keyboard"); } return; }
+  if(/^[1-9]$/.test(e.key)){ const c = state.cats[+e.key - 1]; if(c){ e.preventDefault(); addEntry(c.id, "key"); } }
+  else if(e.key === "Backspace"){ e.preventDefault(); undo("keyboard"); }
+});
+
+renderCats(); render(); renderEngine();
+if(engineLocal() && !LOCAL_FILE) loadVocab().then(renderEngine);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "ColonyCaller",
+  "short_name": "ColonyCaller",
+  "description": "Colony assay dictation tool. Say the colony type, keep your eyes on the scope.",
+  "start_url": "./colonycaller.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#EAF0EE",
+  "theme_color": "#18262E",
+  "icons": [{"src": "icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any"}]
+}
